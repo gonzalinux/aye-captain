@@ -3,6 +3,11 @@
     "allow": [
       "Bash(curl*)",
       "Bash(jq*)",
+      "Bash(git clone*)",
+      "Bash(git fetch*)",
+      "Bash(git checkout*)",
+      "Bash(git pull*)",
+      "Bash(git log*)",
 
       "mcp__grafana__alerting_manage_rules",
       "mcp__grafana__list_alert_groups",

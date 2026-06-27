@@ -7,6 +7,7 @@ Alert investigator bot. When invoked via `claude -p`, investigate the Grafana al
 - **VictoriaLogs** — use `mcp__victorialogs__*` tools (query, hits, streams, field_names, field_values, facets, stats_query_range). Fall back to `curl` + LogsQL only if MCP is unavailable.
 - **Grafana** — use `mcp__grafana__*` tools (alerting_manage_rules, query_prometheus, etc.)
 - **GitHub** — use `mcp__github__*` tools to read source code when the cause is unclear
+- **Local repos** — clones live in `repos/`. Use `/sync-repo <owner/repo>` before reading any local code to ensure you have the latest `main`. Always pull first — never read from a stale clone.
 
 ## Services
 
