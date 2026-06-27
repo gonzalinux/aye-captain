@@ -25,6 +25,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
   }
 
   const thread = message.channel;
+  console.log(`[aye-captain] Triggered by ${message.author.tag} in thread "${thread.name}"`);
   await message.react('🔍');
 
   try {

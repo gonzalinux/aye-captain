@@ -11,6 +11,10 @@ interface Params {
 
 export async function investigate({ alert, threadHistory, userMessage }: Params): Promise<string> {
   const prompt = buildPrompt({ alert, threadHistory, userMessage });
+  const alertSnippet = alert.slice(0, 120).replace(/\n/g, ' ');
+  const start = Date.now();
+
+  console.log(`[aye-captain] Starting investigation — alert: ${alertSnippet}`);
 
   const proc = Bun.spawn(
     ['claude', '-p', prompt, '--output-format', 'text', '--max-turns', '20'],
@@ -24,18 +28,30 @@ export async function investigate({ alert, threadHistory, userMessage }: Params)
 
   const killTimer = setTimeout(() => {
     proc.kill('SIGTERM');
-    console.error('Investigation timed out after 4 minutes');
+    console.error('[aye-captain] Investigation timed out after 4 minutes');
   }, TIMEOUT_MS);
+
+  // Stream stderr to console in real-time so tool calls / errors are visible
+  const stderrChunks: Buffer[] = [];
+  (async () => {
+    for await (const chunk of proc.stderr) {
+      const buf = Buffer.from(chunk);
+      stderrChunks.push(buf);
+      process.stderr.write(buf);
+    }
+  })().catch(() => {});
 
   try {
     const output = await new Response(proc.stdout).text();
     const exitCode = await proc.exited;
+    const elapsed = ((Date.now() - start) / 1000).toFixed(1);
 
     if (exitCode !== 0) {
-      const errText = await new Response(proc.stderr).text();
-      throw new Error(`claude exited ${exitCode}: ${errText.slice(0, 300)}`);
+      const errText = Buffer.concat(stderrChunks).toString().slice(0, 300);
+      throw new Error(`claude exited ${exitCode}: ${errText}`);
     }
 
+    console.log(`[aye-captain] Investigation complete in ${elapsed}s — ${output.trim().length} chars`);
     return output.trim() || 'Investigation complete — no output produced.';
   } finally {
     clearTimeout(killTimer);
