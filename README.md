@@ -38,40 +38,26 @@ npm install -g @anthropic-ai/claude-code
 claude login
 ```
 
-**3. VictoriaLogs MCP** — install following the instructions at https://github.com/victoriametrics/mcp-victorialogs, then add to `~/.claude/settings.json`:
+**3. MCP servers** — install [VictoriaLogs MCP](https://github.com/victoriametrics/mcp-victorialogs) and [uv](https://docs.astral.sh/uv/getting-started/installation/), then add the `mcpServers` block to `~/.claude.json`:
+
 ```json
 {
   "mcpServers": {
     "victorialogs": {
-      "command": "mcp-victorialogs",
+      "command": "/home/YOUR_USER/.local/bin/mcp-victorialogs",
+      "args": [],
       "env": {
         "VL_INSTANCE_ENTRYPOINT": "http://localhost:3100"
       }
-    }
-  }
-}
-```
-
-**4. Grafana MCP** — add to `~/.claude/settings.json`:
-```json
-{
-  "mcpServers": {
+    },
     "grafana": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-grafana"],
+      "command": "uvx",
+      "args": ["mcp-grafana"],
       "env": {
-        "GRAFANA_URL": "http://localhost:3000",
-        "GRAFANA_API_KEY": "your_grafana_api_key"
+        "GRAFANA_URL": "http://your-grafana-host:3000",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "your_service_account_token"
       }
-    }
-  }
-}
-```
-
-**5. GitHub MCP** — add to `~/.claude/settings.json` alongside Grafana:
-```json
-{
-  "mcpServers": {
+    },
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
@@ -82,7 +68,9 @@ claude login
   }
 }
 ```
-Token needs `repo` scope (read access to private repos).
+
+- Grafana token: **Administration → Service Accounts** (needs read access to dashboards/alerts)
+- GitHub token needs `repo` scope (read access to private repos)
 
 ### Discord bot
 
