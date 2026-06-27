@@ -17,7 +17,7 @@ export async function investigate({ alert, threadHistory, userMessage }: Params)
   console.log(`[aye-captain] Starting investigation — alert: ${alertSnippet}`);
 
   const proc = Bun.spawn(
-    ['claude', '-p', prompt, '--output-format', 'stream-json', '--max-turns', '20'],
+    ['claude', '-p', prompt, '--output-format', 'stream-json', '--verbose', '--max-turns', '20'],
     {
       cwd: PROJECT_ROOT,
       stdout: 'pipe',
