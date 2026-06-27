@@ -36,6 +36,7 @@
       "mcp__grafana__grafana_api_request",
       "mcp__grafana__generate_deeplink",
       "mcp__grafana__get_panel_image",
+      "mcp__grafana__alerting_manage_routing",
       "mcp__grafana__list_sift_investigations",
       "mcp__grafana__get_sift_investigation",
 
@@ -76,7 +77,6 @@
       "mcp__grafana__create_datasource",
       "mcp__grafana__update_datasource",
       "mcp__grafana__install_plugin",
-      "mcp__grafana__alerting_manage_routing",
       "mcp__grafana__add_activity_to_incident"
     ]
   }
