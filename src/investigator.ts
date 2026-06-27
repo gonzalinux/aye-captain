@@ -17,7 +17,7 @@ export async function investigate({ alert, threadHistory, userMessage }: Params)
   console.log(`[aye-captain] Starting investigation — alert: ${alertSnippet}`);
 
   const proc = Bun.spawn(
-    ['claude', '-p', prompt, '--output-format', 'text', '--max-turns', '20'],
+    ['claude', '-p', prompt, '--output-format', 'stream-json', '--max-turns', '20'],
     {
       cwd: PROJECT_ROOT,
       stdout: 'pipe',
@@ -31,30 +31,65 @@ export async function investigate({ alert, threadHistory, userMessage }: Params)
     console.error('[aye-captain] Investigation timed out after 4 minutes');
   }, TIMEOUT_MS);
 
-  // Stream stderr to console in real-time so tool calls / errors are visible
+  // Drain stderr and surface it so startup/auth errors are visible
   const stderrChunks: Buffer[] = [];
-  (async () => {
+  const stderrDone = (async () => {
     for await (const chunk of proc.stderr) {
       const buf = Buffer.from(chunk);
       stderrChunks.push(buf);
       process.stderr.write(buf);
     }
-  })().catch(() => {});
+  })();
+
+  // Parse stream-json events from stdout, logging tool calls as they happen
+  let finalOutput = '';
+  const stdoutDone = (async () => {
+    const decoder = new TextDecoder();
+    let lineBuffer = '';
+    for await (const chunk of proc.stdout) {
+      lineBuffer += decoder.decode(chunk, { stream: true });
+      const lines = lineBuffer.split('\n');
+      lineBuffer = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const event = JSON.parse(line);
+          logEvent(event);
+          if (event.type === 'result' && event.subtype === 'success') {
+            finalOutput = event.result ?? '';
+          }
+        } catch {}
+      }
+    }
+  })();
 
   try {
-    const output = await new Response(proc.stdout).text();
+    await Promise.all([stdoutDone, stderrDone]);
     const exitCode = await proc.exited;
     const elapsed = ((Date.now() - start) / 1000).toFixed(1);
 
     if (exitCode !== 0) {
-      const errText = Buffer.concat(stderrChunks).toString().slice(0, 300);
+      const errText = Buffer.concat(stderrChunks).toString().slice(0, 500);
       throw new Error(`claude exited ${exitCode}: ${errText}`);
     }
 
-    console.log(`[aye-captain] Investigation complete in ${elapsed}s — ${output.trim().length} chars`);
-    return output.trim() || 'Investigation complete — no output produced.';
+    console.log(`[aye-captain] Investigation complete in ${elapsed}s — ${finalOutput.trim().length} chars`);
+    return finalOutput.trim() || 'Investigation complete — no output produced.';
   } finally {
     clearTimeout(killTimer);
+  }
+}
+
+function logEvent(event: Record<string, any>) {
+  if (event.type === 'assistant') {
+    for (const block of event.message?.content ?? []) {
+      if (block.type === 'tool_use') {
+        const input = JSON.stringify(block.input ?? {}).slice(0, 200);
+        console.log(`[tool] ${block.name} ${input}`);
+      }
+    }
+  } else if (event.type === 'result' && event.subtype !== 'success') {
+    console.error(`[aye-captain] claude result: ${event.subtype} — ${event.error ?? ''}`);
   }
 }
 
